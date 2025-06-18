@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jogo de Regra de Três</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #83a4d4, #b6fbff);
+      padding: 2em;
+    }
+    .screen {
+      display: none;
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 2em;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      animation: fadeIn 0.5s ease;
+    }
+    .screen.active {
+      display: block;
+    }
+    input, button, select {
+      padding: 0.8em;
+      margin: 0.5em 0;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .score {
+      margin-top: 1em;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    #result.correct { color: green; animation: pulse 0.3s; }
+    #result.wrong { color: red; animation: shake 0.3s; }
+
+    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tela Inicial -->
+  <div class="screen active" id="startScreen">
+    <h1>🧠 Jogo de Regra de Três</h1>
+    <p>Escolha a dificuldade:</p>
+    <select id="difficulty">
+      <option value="easy">Fácil</option>
+      <option value="medium">Médio</option>
+      <option value="hard">Difícil</option>
+    </select>
+    <button onclick="startGame()">Começar</button>
+  </div>
+
+  <!-- Tela do Jogo -->
+  <div class="screen" id="gameScreen">
+    <p id="question">Carregando pergunta...</p>
+    <input type="number" id="answer" placeholder="Ex: 10.00" step="0.01" />
+    <button onclick="checkAnswer()" id="submitBtn">Responder</button>
+    <button onclick="nextQuestion()" id="nextBtn" style="display:none;">Próxima pergunta</button>
+    <p id="result"></p>
+    <div class="score">Pontuação: <span id="score">0</span></div>
+  </div>
+
+  <!-- Tela Final -->
+  <div class="screen" id="endScreen">
+    <h2>🏁 Fim do jogo!</h2>
+    <p>Sua pontuação final foi: <strong id="finalScore"></strong></p>
+    <button onclick="resetGame()">Jogar novamente</button>
+  </div>
+
+  <!-- Sons -->
+  <audio id="sound-correct" src="https://www.soundjay.com/buttons/sounds/button-4.mp3"></audio>
+  <audio id="sound-wrong" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+  <audio id="sound-end" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
+
+  <script>
+    let currentQuestion = {};
+    let score = 0;
+    let totalQuestions = 5;
+    let questionCount = 0;
+    let difficulty = "easy";
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function startGame() {
+      score = 0;
+      questionCount = 0;
+      difficulty = document.getElementById("difficulty").value;
+      showScreen("gameScreen");
+      generateQuestion();
+    }
+
+    function generateQuestion() {
+      let x, y, z;
+      switch (difficulty) {
+        case "easy":
+          x = getRandom(1, 5);
+          y = getRandom(2, 10) * 2;
+          z = getRandom(2, 6);
+          break;
+        case "medium":
+          x = getRandom(2, 10);
+          y = getRandom(10, 50);
+          z = getRandom(5, 15);
+          break;
+        case "hard":
+          x = getRandom(5, 20);
+          y = getRandom(20, 100);
+          z = getRandom(10, 30);
+          break;
+      }
+      const result = (z * y) / x;
+      currentQuestion = {
+        text: Se ${x} itens custam ${y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}, quanto custam ${z} itens?,
+        answer: parseFloat(result.toFixed(2))
+      };
+      document.getElementById("question").innerText = currentQuestion.text;
+      document.getElementById("answer").value = "";
+      document.getElementById("result").innerText = "";
+      document.getElementById("submitBtn").disabled = false;
+      document.getElementById("nextBtn").style.display = "none";
+    }
+
+    function checkAnswer() {
+      const input = document.getElementById("answer").value;
+      const userAnswer = parseFloat(input.replace(",", "."));
+      const correct = currentQuestion.answer;
+      const resultEl = document.getElementById("result");
+      const correctSound = document.getElementById("sound-correct");
+      const wrongSound = document.getElementById("sound-wrong");
+
+      if (Math.abs(userAnswer - correct) < 0.1) {
+        resultEl.textContent = "✅ Resposta correta!";
+        resultEl.className = "correct";
+        correctSound.play();
+        score++;
+      } else {
+        resultEl.textContent = ❌ Errado! Resposta correta: ${correct.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })};
+        resultEl.className = "wrong";
+        wrongSound.play();
+      }
+
+      document.getElementById("score").innerText = score;
+      document.getElementById("submitBtn").disabled = true;
+      document.getElementById("nextBtn").style.display = "inline";
+    }
+
+    function nextQuestion() {
+      questionCount++;
+      if (questionCount >= totalQuestions) {
+        endGame();
+      } else {
+        generateQuestion();
+      }
+    }
+
+    function endGame() {
+      document.getElementById("finalScore").innerText = ${score} de ${totalQuestions};
+      document.getElementById("sound-end").play();
+      showScreen("endScreen");
+    }
+
+    function resetGame() {
+      showScreen("startScreen");
+    }
+
+    function getRandom(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+  </script>
+</body>
+</html>
